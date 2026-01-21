@@ -37,7 +37,6 @@ public class TetShow extends JavaPlugin {
                 p.sendMessage("§cShow đang chạy!");
                 return true;
             }
-
             center = p.getWorld().getSpawnLocation().clone().add(0, 25, 0);
             startShow();
             return true;
@@ -48,7 +47,6 @@ public class TetShow extends JavaPlugin {
             p.sendMessage("§cĐã dừng show!");
             return true;
         }
-
         return true;
     }
 
@@ -76,7 +74,6 @@ public class TetShow extends JavaPlugin {
                 for (int i = 0; i < 25; i++) {
                     double rad = Math.toRadians(angle + i * 10);
                     double r1 = 8;
-
                     spawnParticle(w, Math.cos(rad) * r1, i * 0.15, Math.sin(rad) * r1);
                     spawnParticle(w, Math.cos(rad + Math.PI) * r1, i * 0.15, Math.sin(rad + Math.PI) * r1);
                 }
@@ -87,14 +84,14 @@ public class TetShow extends JavaPlugin {
                 double lionY = Math.sin(time * 0.4) * 2.5;
                 for (int i = 0; i < 8; i++) {
                     w.spawnParticle(
-                            Particle.FIREWORKS_SPARK,
+                            Particle.END_ROD,
                             center.clone().add(-8 + i * 0.7, lionY, 8),
                             2, 0, 0, 0, 0
                     );
                 }
 
                 // =========================
-                // 🐎 NGỰA PHI (2 VÒNG, NHANH, XA)
+                // 🐎 NGỰA PHI (NHANH + XA)
                 // =========================
                 double horseR = 16;
                 double hx = Math.cos(Math.toRadians(time * 6)) * horseR;
@@ -164,7 +161,7 @@ public class TetShow extends JavaPlugin {
             }
             for (int y = 0; y < 6; y++) {
                 w.spawnParticle(
-                        Particle.FIREWORKS_SPARK,
+                        Particle.END_ROD,
                         center.clone().add(start, y * 0.35, 0),
                         2
                 );
@@ -194,4 +191,4 @@ public class TetShow extends JavaPlugin {
         }
         time = 0;
     }
-  }
+    }
