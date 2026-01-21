@@ -1,10 +1,12 @@
 name: TetShow
-version: 2.0
+version: 2.1
 main: me.tetshow.TetShow
 api-version: 1.21
 
 commands:
   tetshow:
-    description: Start Tet show 2026
+    description: Start Tet show
   tetstop:
     description: Stop Tet show
+  tetset:
+    description: Set show location
