@@ -1,12 +1,14 @@
 name: TetShow
-version: 2.1
+version: 3.0
 main: me.tetshow.TetShow
 api-version: 1.21
 
 commands:
+  tetset:
+    description: Set show location
   tetshow:
     description: Start Tet show
   tetstop:
     description: Stop Tet show
-  tetset:
-    description: Set show location
+  tetreload:
+    description: Reload config
