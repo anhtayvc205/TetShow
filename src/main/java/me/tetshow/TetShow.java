@@ -3,13 +3,15 @@ package me.tetshow;
 import org.bukkit.*;
 import org.bukkit.command.*;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.Random;
+import java.util.*;
 
 public class TetShow extends JavaPlugin {
 
@@ -17,18 +19,16 @@ public class TetShow extends JavaPlugin {
     private Location center;
     private int time = 0;
 
+    private final List<ArmorStand> dragons = new ArrayList<>();
+    private final List<ArmorStand> texts = new ArrayList<>();
+
     private double angle = 0;
-    private double scale = 0.5;
-
-    private int textIndex = 0;
-    private int phase = 0;
-
-    private final Random r = new Random();
+    private double height = 0;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        getLogger().info("TetShow ULTRA LIGHT ENABLED");
+        getLogger().info("TetShow FINAL ARMORSTAND ENABLED");
     }
 
     @Override
@@ -72,145 +72,170 @@ public class TetShow extends JavaPlugin {
         );
     }
 
+    // ==========================
+    // SHOW
+    // ==========================
     private void startShow() {
         World w = center.getWorld();
         time = 0;
         angle = 0;
-        scale = 0.5;
-        textIndex = 0;
-        phase = 0;
+        height = 0;
+
+        spawnDragons(w);
 
         task = new BukkitRunnable() {
             @Override
             public void run() {
                 time++;
+                angle += 2;
 
+                // 🐲 0–600 bay vòng
                 if (time <= 600) {
-                    spawnDragon(w);
+                    moveDragons(0);
                 }
 
+                // 🐲 600–900 bay lên
                 else if (time <= 900) {
-                    if (phase != 1) { textIndex = 0; phase = 1; }
-                    drawText(w, "TA GIAO");
+                    height += 0.02;
+                    moveDragons(height);
                 }
 
-                else if (time <= 1200) {
-                    if (phase != 2) { textIndex = 0; phase = 2; }
-                    drawText(w, "HAPPY NEW YEAR 2026");
+                // 🔤 900–1200 TÀ GIÁO
+                else if (time == 900) {
+                    removeDragons();
+                    spawnText("TA GIAO");
                 }
 
-                else if (time <= 1500) {
-                    w.spawnParticle(
-                            Particle.FLAME,
-                            center.clone().add(0, 2 + Math.sin(time * 0.3), 6),
-                            6
-                    );
+                // 🔤 1200–1800 HAPPY
+                else if (time == 1200) {
+                    removeText();
+                    spawnText("HAPPY NEW YEAR 2026");
                 }
 
-                else if (time <= 1800) {
-                    double r = 10;
-                    double x = Math.cos(Math.toRadians(time * 4)) * r;
-                    double z = Math.sin(Math.toRadians(time * 4)) * r;
-
-                    w.spawnParticle(
-                            Particle.CLOUD,
-                            center.clone().add(x, 2.5, z),
-                            6
-                    );
+                // 🎆 1800+ pháo hoa
+                else if (time >= 1800) {
+                    fireworks(w);
                 }
 
-                else {
-                    finaleFireworks(w);
-                }
-
-                if (time >= 7800) stopShow();
+                if (time >= 5400) stopShow();
             }
         };
         task.runTaskTimer(this, 0L, 1L);
     }
 
-    private void spawnDragon(World w) {
-        angle += 3;
-        scale = Math.min(2.0, scale + 0.002);
+    // ==========================
+    // DRAGONS
+    // ==========================
+    private void spawnDragons(World w) {
+        dragons.clear();
+        Material[] colors = {
+                Material.RED_CONCRETE,
+                Material.YELLOW_CONCRETE,
+                Material.LIME_CONCRETE
+        };
+
+        for (int d = 0; d < 3; d++) {
+            for (int i = 0; i < 12; i++) {
+                ArmorStand as = w.spawn(center, ArmorStand.class);
+                as.setInvisible(true);
+                as.setMarker(true);
+                as.setGravity(false);
+                as.setSmall(true);
+
+                if (i == 0)
+                    as.getEquipment().setHelmet(new ItemStack(Material.DRAGON_HEAD));
+                else
+                    as.getEquipment().setHelmet(new ItemStack(colors[d]));
+
+                dragons.add(as);
+            }
+        }
+    }
+
+    private void moveDragons(double up) {
+        int index = 0;
 
         for (int d = 0; d < 3; d++) {
             double offset = d * (Math.PI * 2 / 3);
 
             for (int i = 0; i < 12; i++) {
-                double rad = Math.toRadians(angle) - i * 0.35 + offset;
-                double r = 6 * scale;
+                ArmorStand as = dragons.get(index++);
+                double rad = Math.toRadians(angle - i * 20) + offset;
+                double r = 6;
                 double x = Math.cos(rad) * r;
                 double z = Math.sin(rad) * r;
-                double y = 5 + i * 0.3;
+                double y = 4 + i * 0.25 + up;
 
-                Particle p = (i % 2 == 0) ? Particle.FLAME : Particle.LAVA;
-                w.spawnParticle(p, center.clone().add(x, y, z), 1);
+                as.teleport(center.clone().add(x, y, z));
             }
         }
     }
 
-    private void drawText(World w, String text) {
-        double x = -18;
+    private void removeDragons() {
+        for (ArmorStand as : dragons) as.remove();
+        dragons.clear();
+    }
 
-        for (int i = 0; i < textIndex; i++) {
-            char c = text.charAt(i);
-            if (c == ' ') { x += 2.2; continue; }
+    // ==========================
+    // TEXT (ARMORSTAND)
+    // ==========================
+    private void spawnText(String text) {
+        World w = center.getWorld();
+        texts.clear();
 
-            for (int y = 0; y < 6; y++) {
-                w.spawnParticle(
-                        Particle.END_ROD,
-                        center.clone().add(x, y * 0.45, 0),
-                        2
-                );
+        double x = -text.length() * 0.7;
+
+        for (char c : text.toCharArray()) {
+            if (c == ' ') {
+                x += 1.4;
+                continue;
             }
+
+            ArmorStand as = w.spawn(center.clone().add(x, 5, 0), ArmorStand.class);
+            as.setInvisible(true);
+            as.setMarker(true);
+            as.setGravity(false);
+            as.setCustomName("§6" + c);
+            as.setCustomNameVisible(true);
+
+            texts.add(as);
             x += 1.4;
         }
-
-        if (time % 16 == 0 && textIndex < text.length()) {
-            textIndex++;
-        }
     }
 
-    private void finaleFireworks(World w) {
-        if (time % 6 == 0)
-            spawnFirework(w, randomLoc());
-
-        if (time % 30 == 0) {
-            for (int i = 0; i < 360; i += 36) {
-                double rad = Math.toRadians(i);
-                spawnFirework(w, center.clone().add(
-                        Math.cos(rad) * 18,
-                        24,
-                        Math.sin(rad) * 18
-                ));
-            }
-        }
+    private void removeText() {
+        for (ArmorStand as : texts) as.remove();
+        texts.clear();
     }
 
-    private Location randomLoc() {
-        return center.clone().add(rand(-18, 18), rand(22, 30), rand(-18, 18));
-    }
+    // ==========================
+    // FIREWORK
+    // ==========================
+    private void fireworks(World w) {
+        if (time % 6 != 0) return;
 
-    private void spawnFirework(World w, Location l) {
+        Location l = center.clone().add(
+                (Math.random() * 30) - 15,
+                20 + Math.random() * 15,
+                (Math.random() * 30) - 15
+        );
+
         Firework fw = w.spawn(l, Firework.class);
         FireworkMeta m = fw.getFireworkMeta();
         m.addEffect(FireworkEffect.builder()
                 .with(FireworkEffect.Type.BALL_LARGE)
-                .withColor(Color.RED, Color.YELLOW, Color.ORANGE)
+                .withColor(Color.RED, Color.YELLOW, Color.LIME)
                 .trail(true).flicker(true)
                 .build());
         m.setPower(2);
         fw.setFireworkMeta(m);
     }
 
-    private double rand(double min, double max) {
-        return min + (r.nextDouble() * (max - min));
-    }
-
     private void stopShow() {
         if (task != null) task.cancel();
         task = null;
-        time = 0;
+        removeDragons();
+        removeText();
         getLogger().info("TetShow stopped");
     }
-            }
+}
