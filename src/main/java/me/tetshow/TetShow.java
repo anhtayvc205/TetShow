@@ -1,11 +1,6 @@
-package me.tetshow;
-
 import org.bukkit.*;
 import org.bukkit.command.*;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.Firework;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -13,229 +8,198 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
 
-public class TetShow extends JavaPlugin {
+public class TetShow extends JavaPlugin implements CommandExecutor {
 
-    private BukkitRunnable task;
+    private boolean running = false;
     private Location center;
-    private int time = 0;
-
-    private final List<ArmorStand> dragons = new ArrayList<>();
-    private final List<ArmorStand> texts = new ArrayList<>();
-
-    private double angle = 0;
-    private double height = 0;
+    private final List<Entity> spawned = new ArrayList<>();
+    private BukkitRunnable currentTask;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        getLogger().info("TetShow FINAL ARMORSTAND ENABLED");
+        loadCenter();
+        getCommand("tetshow").setExecutor(this);
+        getLogger().info("TetShow enabled");
+    }
+
+    void loadCenter() {
+        if (!getConfig().contains("show.world")) return;
+        World w = Bukkit.getWorld(getConfig().getString("show.world"));
+        center = new Location(
+                w,
+                getConfig().getDouble("show.x"),
+                getConfig().getDouble("show.y"),
+                getConfig().getDouble("show.z")
+        );
+    }
+
+    void saveCenter(Location l) {
+        getConfig().set("show.world", l.getWorld().getName());
+        getConfig().set("show.x", l.getX());
+        getConfig().set("show.y", l.getY());
+        getConfig().set("show.z", l.getZ());
+        saveConfig();
+        center = l.clone();
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public boolean onCommand(CommandSender s, Command cmd, String l, String[] a) {
+        if (!(s instanceof Player p)) return true;
 
-        if (!(sender instanceof Player p)) return true;
-
-        if (cmd.getName().equalsIgnoreCase("tetset")) {
-            Location l = p.getLocation();
-            getConfig().set("show.world", l.getWorld().getName());
-            getConfig().set("show.x", l.getX());
-            getConfig().set("show.y", l.getY());
-            getConfig().set("show.z", l.getZ());
-            saveConfig();
-            p.sendMessage("§aĐã set vị trí show");
+        if (a.length == 0) {
+            p.sendMessage("/tetshow set | start | stop | reload");
             return true;
         }
 
-        if (cmd.getName().equalsIgnoreCase("tetshow")) {
-            if (task != null) return true;
-            center = loadLocation().add(0, 10, 0);
-            startShow();
-            return true;
+        switch (a[0].toLowerCase()) {
+            case "set" -> {
+                saveCenter(p.getLocation());
+                p.sendMessage("§aĐã set vị trí show");
+            }
+            case "start" -> {
+                if (running) {
+                    p.sendMessage("§cShow đang chạy");
+                    return true;
+                }
+                if (center == null) {
+                    p.sendMessage("§cChưa set vị trí. Dùng /tetshow set");
+                    return true;
+                }
+                startShow();
+                p.sendMessage("§aBắt đầu show");
+            }
+            case "stop" -> {
+                stopShow();
+                p.sendMessage("§cĐã dừng show");
+            }
+            case "reload" -> {
+                reloadConfig();
+                loadCenter();
+                p.sendMessage("§aĐã reload config");
+            }
         }
-
-        if (cmd.getName().equalsIgnoreCase("tetstop")) {
-            stopShow();
-            return true;
-        }
-
         return true;
     }
 
-    private Location loadLocation() {
-        FileConfiguration c = getConfig();
-        return new Location(
-                Bukkit.getWorld(c.getString("show.world")),
-                c.getDouble("show.x"),
-                c.getDouble("show.y"),
-                c.getDouble("show.z")
+    /* ================= SHOW ================= */
+
+    void startShow() {
+        running = true;
+        runText(() ->
+                runDragon(() ->
+                        runFirework(() -> running = false)
+                )
         );
     }
 
-    // ==========================
-    // SHOW
-    // ==========================
-    private void startShow() {
-        World w = center.getWorld();
-        time = 0;
-        angle = 0;
-        height = 0;
-
-        spawnDragons(w);
-
-        task = new BukkitRunnable() {
-            @Override
-            public void run() {
-                time++;
-                angle += 2;
-
-                // 🐲 0–600 bay vòng
-                if (time <= 600) {
-                    moveDragons(0);
-                }
-
-                // 🐲 600–900 bay lên
-                else if (time <= 900) {
-                    height += 0.02;
-                    moveDragons(height);
-                }
-
-                // 🔤 900–1200 TÀ GIÁO
-                else if (time == 900) {
-                    removeDragons();
-                    spawnText("TA GIAO");
-                }
-
-                // 🔤 1200–1800 HAPPY
-                else if (time == 1200) {
-                    removeText();
-                    spawnText("HAPPY NEW YEAR 2026");
-                }
-
-                // 🎆 1800+ pháo hoa
-                else if (time >= 1800) {
-                    fireworks(w);
-                }
-
-                if (time >= 5400) stopShow();
-            }
-        };
-        task.runTaskTimer(this, 0L, 1L);
+    void stopShow() {
+        if (currentTask != null) currentTask.cancel();
+        spawned.forEach(Entity::remove);
+        spawned.clear();
+        running = false;
     }
 
-    // ==========================
-    // DRAGONS
-    // ==========================
-    private void spawnDragons(World w) {
-        dragons.clear();
-        Material[] colors = {
-                Material.RED_CONCRETE,
-                Material.YELLOW_CONCRETE,
-                Material.LIME_CONCRETE
-        };
+    /* ================= TEXT ================= */
+    void runText(Runnable done) {
+        String text = "TA GIAO";
+        List<Location> blocks = new ArrayList<>();
 
-        for (int d = 0; d < 3; d++) {
-            for (int i = 0; i < 12; i++) {
-                ArmorStand as = w.spawn(center, ArmorStand.class);
-                as.setInvisible(true);
-                as.setMarker(true);
-                as.setGravity(false);
-                as.setSmall(true);
-
-                if (i == 0)
-                    as.getEquipment().setHelmet(new ItemStack(Material.DRAGON_HEAD));
-                else
-                    as.getEquipment().setHelmet(new ItemStack(colors[d]));
-
-                dragons.add(as);
-            }
-        }
-    }
-
-    private void moveDragons(double up) {
-        int index = 0;
-
-        for (int d = 0; d < 3; d++) {
-            double offset = d * (Math.PI * 2 / 3);
-
-            for (int i = 0; i < 12; i++) {
-                ArmorStand as = dragons.get(index++);
-                double rad = Math.toRadians(angle - i * 20) + offset;
-                double r = 6;
-                double x = Math.cos(rad) * r;
-                double z = Math.sin(rad) * r;
-                double y = 4 + i * 0.25 + up;
-
-                as.teleport(center.clone().add(x, y, z));
-            }
-        }
-    }
-
-    private void removeDragons() {
-        for (ArmorStand as : dragons) as.remove();
-        dragons.clear();
-    }
-
-    // ==========================
-    // TEXT (ARMORSTAND)
-    // ==========================
-    private void spawnText(String text) {
-        World w = center.getWorld();
-        texts.clear();
-
-        double x = -text.length() * 0.7;
-
+        int x = -text.length() * 2;
         for (char c : text.toCharArray()) {
-            if (c == ' ') {
-                x += 1.4;
-                continue;
-            }
-
-            ArmorStand as = w.spawn(center.clone().add(x, 5, 0), ArmorStand.class);
-            as.setInvisible(true);
-            as.setMarker(true);
-            as.setGravity(false);
-            as.setCustomName("§6" + c);
-            as.setCustomNameVisible(true);
-
-            texts.add(as);
-            x += 1.4;
+            if (c != ' ')
+                blocks.add(center.clone().add(x, 0, 0));
+            x += 4;
         }
+
+        int duration = getConfig().getInt("timeline.text_duration") * 20;
+
+        currentTask = new BukkitRunnable() {
+            int i = 0;
+            int t = 0;
+            public void run() {
+                if (i < blocks.size()) {
+                    blocks.get(i).getBlock().setType(Material.GOLD_BLOCK);
+                    i++;
+                }
+                if (t++ > duration) {
+                    cancel();
+                    done.run();
+                }
+            }
+        };
+        currentTask.runTaskTimer(this, 0, 10);
     }
 
-    private void removeText() {
-        for (ArmorStand as : texts) as.remove();
-        texts.clear();
+    /* ================= DRAGON ================= */
+    void runDragon(Runnable done) {
+        List<ArmorStand> dragon = new ArrayList<>();
+
+        int parts = getConfig().getInt("dragon.parts");
+        double radius = getConfig().getDouble("dragon.radius");
+        double speed = getConfig().getDouble("dragon.speed");
+        int duration = getConfig().getInt("timeline.dragon_duration") * 20;
+
+        for (int i = 0; i < parts; i++) {
+            ArmorStand as = center.getWorld().spawn(center, ArmorStand.class);
+            as.setInvisible(true);
+            as.setGravity(false);
+            as.getEquipment().setHelmet(new ItemStack(Material.RED_CONCRETE));
+            dragon.add(as);
+            spawned.add(as);
+        }
+
+        currentTask = new BukkitRunnable() {
+            double t = 0;
+            int tick = 0;
+
+            public void run() {
+                int i = 0;
+                for (ArmorStand a : dragon) {
+                    double angle = t + i * 0.25;
+                    a.teleport(center.clone().add(
+                            Math.cos(angle) * radius,
+                            5 + i * 0.1,
+                            Math.sin(angle) * radius
+                    ));
+                    i++;
+                }
+                t += speed;
+                if (tick++ > duration) {
+                    dragon.forEach(Entity::remove);
+                    cancel();
+                    done.run();
+                }
+            }
+        };
+        currentTask.runTaskTimer(this, 0, 1);
     }
 
-    // ==========================
-    // FIREWORK
-    // ==========================
-    private void fireworks(World w) {
-        if (time % 6 != 0) return;
+    /* ================= FIREWORK ================= */
+    void runFirework(Runnable done) {
+        int interval = getConfig().getInt("firework.interval");
+        int duration = getConfig().getInt("timeline.firework_duration") * 20;
+        int power = getConfig().getInt("firework.power");
 
-        Location l = center.clone().add(
-                (Math.random() * 30) - 15,
-                20 + Math.random() * 15,
-                (Math.random() * 30) - 15
-        );
+        currentTask = new BukkitRunnable() {
+            int t = 0;
+            public void run() {
+                Firework fw = center.getWorld().spawn(center.clone().add(
+                        Math.random()*20-10, 20, Math.random()*20-10), Firework.class);
+                FireworkMeta meta = fw.getFireworkMeta();
+                meta.addEffect(FireworkEffect.builder()
+                        .withColor(Color.RED, Color.YELLOW, Color.ORANGE)
+                        .trail(true).flicker(true).build());
+                meta.setPower(power);
+                fw.setFireworkMeta(meta);
+                spawned.add(fw);
 
-        Firework fw = w.spawn(l, Firework.class);
-        FireworkMeta m = fw.getFireworkMeta();
-        m.addEffect(FireworkEffect.builder()
-                .with(FireworkEffect.Type.BALL_LARGE)
-                .withColor(Color.RED, Color.YELLOW, Color.LIME)
-                .trail(true).flicker(true)
-                .build());
-        m.setPower(2);
-        fw.setFireworkMeta(m);
+                if (t++ > duration) {
+                    cancel();
+                    done.run();
+                }
+            }
+        };
+        currentTask.runTaskTimer(this, 0, interval);
     }
-
-    private void stopShow() {
-        if (task != null) task.cancel();
-        task = null;
-        removeDragons();
-        removeText();
-        getLogger().info("TetShow stopped");
-    }
-}
+                }
