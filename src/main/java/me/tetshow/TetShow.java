@@ -17,25 +17,20 @@ public class TetShow extends JavaPlugin {
     private Location center;
     private int time = 0;
 
-    // dragon
-    private double dragonAngle = 0;
-    private double dragonScale = 0.4;
+    private double angle = 0;
+    private double scale = 0.5;
 
-    // text
     private int textIndex = 0;
-    private int textPhase = 0;
+    private int phase = 0;
 
     private final Random r = new Random();
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        getLogger().info("TetShow FINAL FULL ENABLED");
+        getLogger().info("TetShow ULTRA LIGHT ENABLED");
     }
 
-    // ========================
-    // COMMAND
-    // ========================
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 
@@ -54,7 +49,7 @@ public class TetShow extends JavaPlugin {
 
         if (cmd.getName().equalsIgnoreCase("tetshow")) {
             if (task != null) return true;
-            center = loadLocation().add(0, 15, 0);
+            center = loadLocation().add(0, 10, 0);
             startShow();
             return true;
         }
@@ -77,165 +72,123 @@ public class TetShow extends JavaPlugin {
         );
     }
 
-    // ========================
-    // SHOW
-    // ========================
     private void startShow() {
         World w = center.getWorld();
         time = 0;
-        dragonAngle = 0;
-        dragonScale = 0.4;
+        angle = 0;
+        scale = 0.5;
         textIndex = 0;
-        textPhase = 0;
+        phase = 0;
 
         task = new BukkitRunnable() {
             @Override
             public void run() {
                 time++;
 
-                // ======================
-                // 🐲 0–600 RỒNG
-                // ======================
                 if (time <= 600) {
-                    spawnDoubleDragon(w);
+                    spawnDragon(w);
                 }
 
-                // ======================
-                // 🔤 600–900 TÀ GIÁO
-                // ======================
                 else if (time <= 900) {
-                    if (textPhase != 1) { textIndex = 0; textPhase = 1; }
-                    drawSlowText(w, "TA GIAO");
+                    if (phase != 1) { textIndex = 0; phase = 1; }
+                    drawText(w, "TA GIAO");
                 }
 
-                // ======================
-                // 🔤 900–1300 HAPPY NEW YEAR
-                // ======================
-                else if (time <= 1300) {
-                    if (textPhase != 2) { textIndex = 0; textPhase = 2; }
-                    drawSlowText(w, "HAPPY NEW YEAR 2026");
+                else if (time <= 1200) {
+                    if (phase != 2) { textIndex = 0; phase = 2; }
+                    drawText(w, "HAPPY NEW YEAR 2026");
                 }
 
-                // ======================
-                // 🦁 1300–1700 LÂN
-                // ======================
-                else if (time <= 1700) {
-                    for (int i = 0; i < 12; i++) {
-                        w.spawnParticle(
-                                Particle.FLAME,
-                                center.clone().add(-6 + i * 0.6, Math.sin(time * 0.4) * 2.8, 6),
-                                10
-                        );
-                    }
+                else if (time <= 1500) {
+                    w.spawnParticle(
+                            Particle.FLAME,
+                            center.clone().add(0, 2 + Math.sin(time * 0.3), 6),
+                            6
+                    );
                 }
 
-                // ======================
-                // 🐎 1700–2100 NGỰA
-                // ======================
-                else if (time <= 2100) {
-                    double r = 14;
-                    double x = Math.cos(Math.toRadians(time * 5)) * r;
-                    double z = Math.sin(Math.toRadians(time * 5)) * r;
+                else if (time <= 1800) {
+                    double r = 10;
+                    double x = Math.cos(Math.toRadians(time * 4)) * r;
+                    double z = Math.sin(Math.toRadians(time * 4)) * r;
 
-                    for (int i = 0; i < 8; i++) {
-                        w.spawnParticle(
-                                Particle.CLOUD,
-                                center.clone().add(x + i * 0.3, 2.5, z),
-                                8
-                        );
-                    }
+                    w.spawnParticle(
+                            Particle.CLOUD,
+                            center.clone().add(x, 2.5, z),
+                            6
+                    );
                 }
 
-                // ======================
-                // 🎆 2100–10500 PHÁO HOA
-                // ======================
                 else {
                     finaleFireworks(w);
                 }
 
-                if (time >= 10500) stopShow();
+                if (time >= 7800) stopShow();
             }
         };
         task.runTaskTimer(this, 0L, 1L);
     }
 
-    // ========================
-    // RỒNG 2 CON – TO DẦN – TAN
-    // ========================
-    private void spawnDoubleDragon(World w) {
-        dragonAngle += 4;
-        dragonScale = Math.min(2.0, dragonScale + 0.005);
+    private void spawnDragon(World w) {
+        angle += 3;
+        scale = Math.min(2.0, scale + 0.002);
 
-        for (int d = 0; d < 2; d++) {
-            double offset = d == 0 ? 0 : Math.PI;
+        for (int d = 0; d < 3; d++) {
+            double offset = d * (Math.PI * 2 / 3);
 
-            for (int i = 0; i < 24; i++) {
-                double rad = Math.toRadians(dragonAngle) - i * 0.25 + offset;
-                double r = 8 * dragonScale;
+            for (int i = 0; i < 12; i++) {
+                double rad = Math.toRadians(angle) - i * 0.35 + offset;
+                double r = 6 * scale;
                 double x = Math.cos(rad) * r;
                 double z = Math.sin(rad) * r;
-                double y = 6 + i * 0.28;
+                double y = 5 + i * 0.3;
 
                 Particle p = (i % 2 == 0) ? Particle.FLAME : Particle.LAVA;
-
-                w.spawnParticle(p, center.clone().add(x, y, z), 4);
+                w.spawnParticle(p, center.clone().add(x, y, z), 1);
             }
         }
     }
 
-    // ========================
-    // CHỮ CHẬM – RÕ
-    // ========================
-    private void drawSlowText(World w, String text) {
-        double x = -22;
+    private void drawText(World w, String text) {
+        double x = -18;
 
         for (int i = 0; i < textIndex; i++) {
             char c = text.charAt(i);
-            if (c == ' ') {
-                x += 2.5;
-                continue;
-            }
+            if (c == ' ') { x += 2.2; continue; }
 
-            for (int y = 0; y < 7; y++) {
+            for (int y = 0; y < 6; y++) {
                 w.spawnParticle(
                         Particle.END_ROD,
                         center.clone().add(x, y * 0.45, 0),
-                        6
+                        2
                 );
             }
-            x += 1.6;
+            x += 1.4;
         }
 
-        if (time % 14 == 0 && textIndex < text.length()) {
+        if (time % 16 == 0 && textIndex < text.length()) {
             textIndex++;
         }
     }
 
-    // ========================
-    // PHÁO HOA 7 PHÚT
-    // ========================
     private void finaleFireworks(World w) {
-
-        if (time % 3 == 0)
+        if (time % 6 == 0)
             spawnFirework(w, randomLoc());
 
-        if (time % 25 == 0) {
-            for (int i = 0; i < 360; i += 24) {
+        if (time % 30 == 0) {
+            for (int i = 0; i < 360; i += 36) {
                 double rad = Math.toRadians(i);
                 spawnFirework(w, center.clone().add(
-                        Math.cos(rad) * 22,
-                        28,
-                        Math.sin(rad) * 22
+                        Math.cos(rad) * 18,
+                        24,
+                        Math.sin(rad) * 18
                 ));
             }
         }
-
-        if (time % 12 == 0)
-            w.playSound(center, Sound.ENTITY_FIREWORK_ROCKET_LARGE_BLAST, 2f, 1f);
     }
 
     private Location randomLoc() {
-        return center.clone().add(rand(-22, 22), rand(22, 38), rand(-22, 22));
+        return center.clone().add(rand(-18, 18), rand(22, 30), rand(-18, 18));
     }
 
     private void spawnFirework(World w, Location l) {
@@ -243,10 +196,10 @@ public class TetShow extends JavaPlugin {
         FireworkMeta m = fw.getFireworkMeta();
         m.addEffect(FireworkEffect.builder()
                 .with(FireworkEffect.Type.BALL_LARGE)
-                .withColor(Color.RED, Color.YELLOW, Color.ORANGE, Color.FUCHSIA)
+                .withColor(Color.RED, Color.YELLOW, Color.ORANGE)
                 .trail(true).flicker(true)
                 .build());
-        m.setPower(3);
+        m.setPower(2);
         fw.setFireworkMeta(m);
     }
 
@@ -260,4 +213,4 @@ public class TetShow extends JavaPlugin {
         time = 0;
         getLogger().info("TetShow stopped");
     }
-}
+            }
