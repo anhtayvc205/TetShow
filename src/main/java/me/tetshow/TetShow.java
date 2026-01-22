@@ -19,49 +19,15 @@ public class TetShow extends JavaPlugin {
     private int time = 0;
     private final Random r = new Random();
 
-    // dragon 3D
-    private ArmorStand[] dragon = new ArmorStand[12];
+    private ArmorStand[] dragon = new ArmorStand[14];
 
-    // text animation
     private int textIndex = 0;
     private boolean glow = false;
-
-    // timeline
-    private int tDragon, tLion, tHorse, tText, tFinale;
-    private int total;
-
-    // firework
-    private int fwRadius, fwMinH, fwMaxH, fwInterval, fwRing;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        loadConfigValues();
-        getLogger().info("=================================");
-        getLogger().info(" TetShow 2026 ENABLED");
-        getLogger().info(" World: " + getConfig().getString("show.world"));
-        getLogger().info("=================================");
-    }
-
-    // ========================
-    // CONFIG
-    // ========================
-    private void loadConfigValues() {
-        FileConfiguration c = getConfig();
-
-        tDragon = c.getInt("timeline.dragon");
-        tLion   = c.getInt("timeline.lion");
-        tHorse  = c.getInt("timeline.horse");
-        tText   = c.getInt("timeline.text");
-        tFinale = c.getInt("timeline.finale");
-
-        fwRadius   = c.getInt("firework.radius");
-        fwMinH     = c.getInt("firework.height_min");
-        fwMaxH     = c.getInt("firework.height_max");
-        fwInterval = c.getInt("firework.normal_interval");
-        fwRing     = c.getInt("firework.ring_interval");
-
-        total = tDragon + tLion + tHorse + tText + tFinale + 60;
+        getLogger().info("TetShow FINAL FIX ENABLED");
     }
 
     // ========================
@@ -72,9 +38,7 @@ public class TetShow extends JavaPlugin {
 
         if (cmd.getName().equalsIgnoreCase("tetreload")) {
             reloadConfig();
-            loadConfigValues();
-            sender.sendMessage("§aTetShow config reloaded!");
-            getLogger().info("TetShow config reloaded.");
+            sender.sendMessage("§aReloaded config");
             return true;
         }
 
@@ -87,15 +51,12 @@ public class TetShow extends JavaPlugin {
             getConfig().set("show.y", l.getY());
             getConfig().set("show.z", l.getZ());
             saveConfig();
-            p.sendMessage("§aĐã set vị trí show!");
+            p.sendMessage("§aSet show location!");
             return true;
         }
 
         if (cmd.getName().equalsIgnoreCase("tetshow")) {
-            if (task != null) {
-                p.sendMessage("§cShow đang chạy!");
-                return true;
-            }
+            if (task != null) return true;
             center = loadLocation().add(0, 25, 0);
             startShow();
             return true;
@@ -103,7 +64,6 @@ public class TetShow extends JavaPlugin {
 
         if (cmd.getName().equalsIgnoreCase("tetstop")) {
             stopShow();
-            p.sendMessage("§cĐã dừng show!");
             return true;
         }
 
@@ -128,7 +88,6 @@ public class TetShow extends JavaPlugin {
         time = 0;
         angle = 0;
         textIndex = 0;
-        glow = false;
 
         task = new BukkitRunnable() {
             @Override
@@ -138,64 +97,65 @@ public class TetShow extends JavaPlugin {
                 if (time % 20 == 0) glow = !glow;
 
                 // 🔤 0–60: TÀ GIÁO
-                if (time < 60) {
-                    spawnTextFirework("TA GIAO");
-                }
+                if (time < 60) spawnTextFirework("TA GIAO");
 
-                int t1 = 60 + tDragon;
-                int t2 = t1 + tLion;
-                int t3 = t2 + tHorse;
-                int t4 = t3 + tText;
-
-                // 🐲 RỒNG 3D
+                // 🐲 60–200: RỒNG 3D
                 if (time == 60) spawnDragon3D();
-                if (time > 60 && time < t1) moveDragon3D((time - 60) / (double) tDragon);
-                if (time == t1) removeDragon3D();
+                if (time >= 60 && time < 200) moveDragon3D((time - 60) / 140.0);
+                if (time == 200) removeDragon3D();
 
-                // 🦁 LÂN
-                if (time >= t1 && time < t2) {
-                    double y = Math.sin(time * 0.4) * 2.5;
-                    for (int i = 0; i < 8; i++)
-                        w.spawnParticle(Particle.END_ROD, center.clone().add(-8 + i * 0.7, y, 8), 1);
+                // 🦁 200–300: LÂN
+                if (time >= 200 && time < 300) {
+                    double y = Math.sin(time * 0.45) * 3.0;
+                    for (int i = 0; i < 12; i++)
+                        w.spawnParticle(
+                                Particle.FLAME,
+                                center.clone().add(-6 + i * 0.6, y, 6),
+                                8
+                        );
                 }
 
-                // 🐎 NGỰA
-                if (time >= t2 && time < t3) {
+                // 🐎 300–380: NGỰA
+                if (time >= 300 && time < 380) {
                     double r = 16;
-                    double x = Math.cos(Math.toRadians(time * 6)) * r;
-                    double z = Math.sin(Math.toRadians(time * 6)) * r;
-                    for (int i = 0; i < 4; i++)
-                        w.spawnParticle(Particle.CLOUD, center.clone().add(x + i * 0.4, 2, z), 1);
+                    double x = Math.cos(Math.toRadians(time * 7)) * r;
+                    double z = Math.sin(Math.toRadians(time * 7)) * r;
+                    for (int i = 0; i < 6; i++)
+                        w.spawnParticle(
+                                Particle.CLOUD,
+                                center.clone().add(x + i * 0.3, 2.5, z),
+                                8
+                        );
                 }
 
-                // 🔤 CHÚC MỪNG NĂM MỚI
-                if (time >= t3 && time < t4) {
+                // 🔤 380–520: CHÚC MỪNG NĂM MỚI
+                if (time >= 380 && time < 520) {
                     drawTextAnimated(w);
                 }
 
-                // 🎆 CAO TRÀO
-                if (time >= t4) {
-                    if (time % fwInterval == 0)
+                // 🎆 520–900: CAO TRÀO
+                if (time >= 520) {
+                    if (time % 4 == 0)
                         spawnRandomFirework(randomLoc());
 
-                    if (time % fwRing == 0) {
-                        spawnRing(8, 4, Color.RED);
-                        spawnRing(12, 6, Color.YELLOW);
-                        spawnRing(16, 8, Color.ORANGE);
+                    if (time % 20 == 0) {
+                        spawnRing(8, 5, Color.RED);
+                        spawnRing(12, 7, Color.YELLOW);
+                        spawnRing(18, 10, Color.ORANGE);
                     }
 
                     if (time % 10 == 0)
-                        w.playSound(center, Sound.ENTITY_FIREWORK_ROCKET_LARGE_BLAST, 1.5f, 1f);
+                        w.playSound(center, Sound.ENTITY_FIREWORK_ROCKET_LARGE_BLAST, 1.8f, 1f);
                 }
 
-                if (time >= total) stopShow();
+                if (time >= 900) stopShow();
             }
         };
         task.runTaskTimer(this, 0L, 1L);
     }
 
     // ========================
-    // DRAGON 3D
+    // RỒNG 3D CÓ ĐẦU
     // ========================
     private void spawnDragon3D() {
         World w = center.getWorld();
@@ -204,18 +164,25 @@ public class TetShow extends JavaPlugin {
             a.setInvisible(true);
             a.setMarker(true);
             a.setGravity(false);
-            a.getEquipment().setHelmet(new ItemStack(i % 2 == 0 ? Material.RED_CONCRETE : Material.YELLOW_CONCRETE));
+
+            if (i == 0)
+                a.getEquipment().setHelmet(new ItemStack(Material.DRAGON_HEAD));
+            else if (i < 4)
+                a.getEquipment().setHelmet(new ItemStack(Material.RED_CONCRETE));
+            else
+                a.getEquipment().setHelmet(new ItemStack(Material.YELLOW_CONCRETE));
+
             dragon[i] = a;
         }
     }
 
     private void moveDragon3D(double scale) {
         for (int i = 0; i < dragon.length; i++) {
-            double a = Math.toRadians(angle - i * 15);
-            double r = 6 + scale * 4;
+            double a = Math.toRadians(angle - i * 18);
+            double r = 7 + scale * 6;
             double x = Math.cos(a) * r;
             double z = Math.sin(a) * r;
-            double y = i * 0.3;
+            double y = i * 0.35;
             dragon[i].teleport(center.clone().add(x, y, z));
         }
     }
@@ -226,28 +193,36 @@ public class TetShow extends JavaPlugin {
     }
 
     // ========================
-    // TEXT
+    // TEXT RÕ – TO – SÁNG
     // ========================
     private void drawTextAnimated(World w) {
         String t = "CHUC MUNG NAM MOI 2026";
-        double start = -18;
-        Particle p = glow ? Particle.END_ROD : Particle.FIREWORK;
+        double start = -22;
+        Particle p = glow ? Particle.END_ROD : Particle.FLAME;
 
         for (int i = 0; i < Math.min(textIndex, t.length()); i++) {
             char c = t.charAt(i);
-            if (c == ' ') { start += 1.5; continue; }
-            for (int y = 0; y < 6; y++)
-                w.spawnParticle(p, center.clone().add(start, y * 0.35, 0), 2);
-            start += 0.9;
+            if (c == ' ') { start += 2.2; continue; }
+
+            for (int y = 0; y < 8; y++) {
+                w.spawnParticle(
+                        p,
+                        center.clone().add(start, y * 0.45, 0),
+                        8, 0.05, 0.05, 0.05, 0
+                );
+            }
+            start += 1.4;
         }
-        if (time % 10 == 0 && textIndex < t.length()) textIndex++;
+
+        if (time % 6 == 0 && textIndex < t.length())
+            textIndex++;
     }
 
     // ========================
-    // FIREWORK
+    // FIREWORK TO – CAO – RỘNG
     // ========================
     private Location randomLoc() {
-        return center.clone().add(rand(-fwRadius, fwRadius), rand(fwMinH, fwMaxH), rand(-fwRadius, fwRadius));
+        return center.clone().add(rand(-20, 20), rand(6, 18), rand(-20, 20));
     }
 
     private void spawnRandomFirework(Location l) {
@@ -257,13 +232,12 @@ public class TetShow extends JavaPlugin {
                 .with(FireworkEffect.Type.values()[r.nextInt(FireworkEffect.Type.values().length)])
                 .withColor(Color.RED, Color.YELLOW, Color.ORANGE, Color.FUCHSIA, Color.AQUA)
                 .trail(true).flicker(true).build());
-        m.setPower(0);
+        m.setPower(2); // TO – CAO
         fw.setFireworkMeta(m);
-        Bukkit.getScheduler().runTaskLater(this, fw::detonate, 1L);
     }
 
     private void spawnRing(double r, double y, Color c) {
-        for (int i = 0; i < 360; i += 30) {
+        for (int i = 0; i < 360; i += 24) {
             double rad = Math.toRadians(i);
             spawnColorFirework(center.clone().add(Math.cos(rad) * r, y, Math.sin(rad) * r), c);
         }
@@ -274,18 +248,18 @@ public class TetShow extends JavaPlugin {
         FireworkMeta m = fw.getFireworkMeta();
         m.addEffect(FireworkEffect.builder()
                 .with(FireworkEffect.Type.BALL_LARGE)
-                .withColor(c).trail(true).flicker(true).build());
-        m.setPower(0);
+                .withColor(c)
+                .trail(true).flicker(true).build());
+        m.setPower(2);
         fw.setFireworkMeta(m);
-        Bukkit.getScheduler().runTaskLater(this, fw::detonate, 1L);
     }
 
     private void spawnTextFirework(String t) {
         double start = -6;
         for (char c : t.toCharArray()) {
             if (c == ' ') { start += 2; continue; }
-            spawnColorFirework(center.clone().add(start, 10, 0), Color.YELLOW);
-            start += 1.2;
+            spawnColorFirework(center.clone().add(start, 12, 0), Color.YELLOW);
+            start += 1.4;
         }
     }
 
@@ -297,6 +271,6 @@ public class TetShow extends JavaPlugin {
         if (task != null) task.cancel();
         task = null;
         time = 0;
-        getLogger().info("TetShow stopped.");
+        getLogger().info("TetShow stopped");
     }
 }
