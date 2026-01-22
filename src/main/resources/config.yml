@@ -1,19 +1,19 @@
 show:
   world: tagiaomc
   x: 0
-  y: 80
+  y: 100
   z: 0
 
 timeline:
-  dragon: 120
-  lion: 100
-  horse: 80
-  text: 120
-  finale: 240
+  text_duration: 60
+  dragon_duration: 30
+  firework_duration: 300
+
+dragon:
+  parts: 40
+  radius: 14
+  speed: 0.04
 
 firework:
-  radius: 16
-  height_min: 4
-  height_max: 12
-  normal_interval: 5
-  ring_interval: 20
+  interval: 10
+  power: 2
