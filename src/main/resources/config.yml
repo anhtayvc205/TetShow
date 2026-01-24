@@ -4,16 +4,11 @@ show:
   y: 100
   z: 0
 
-timeline:
-  text_duration: 60
-  dragon_duration: 30
-  firework_duration: 300
-
 dragon:
   parts: 40
   radius: 14
-  speed: 0.04
+  speed: 0.05
 
 firework:
   interval: 10
-  power: 2
+  duration: 600   # 10 phút
