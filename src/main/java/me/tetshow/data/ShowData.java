@@ -6,11 +6,7 @@ import java.util.*;
 
 public class ShowData {
 
-    public static List<Color> colors = new ArrayList<>();
-    public static FireworkEffect.Type pattern = FireworkEffect.Type.BALL;
-    public static int power = 2;
-
-    static {
-        colors.add(Color.RED);
-    }
+    public Color color = Color.RED; // <-- THÊM CÁI NÀY
+    public FireworkEffect.Type pattern = FireworkEffect.Type.BALL;
+    public int power = 2;
 }
