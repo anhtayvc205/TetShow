@@ -1,8 +1,8 @@
-
 name: TetShow
 version: 1.0-PRO
 main: me.tetshow.TetShow
 api-version: 1.21
+
 commands:
   fw:
-    description: Firework show menu
+    description: Firework show
