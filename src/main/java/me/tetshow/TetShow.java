@@ -1,209 +1,220 @@
 import org.bukkit.*;
 import org.bukkit.command.*;
-import org.bukkit.entity.*;
-import org.bukkit.inventory.ItemStack;
+import org.bukkit.entity.Firework;
+import org.bukkit.event.*;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+
 import java.util.*;
 
-public class TetShow extends JavaPlugin implements CommandExecutor {
+public class TetShow extends JavaPlugin implements Listener, CommandExecutor {
 
     Location center;
+    BukkitRunnable task;
     boolean running = false;
-    List<Entity> spawned = new ArrayList<>();
+    boolean waitText = false;
+
+    String text;
+    int duration, interval, radius, height, amount;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        loadCenter();
-        getCommand("tetshow").setExecutor(this);
+        loadConfigValues();
+        Bukkit.getPluginManager().registerEvents(this, this);
+
+        getCommand("fwmenu").setExecutor(this);
+        getCommand("fwstart").setExecutor(this);
+        getCommand("fwstop").setExecutor(this);
+        getCommand("fwset").setExecutor(this);
+        getCommand("fwreload").setExecutor(this);
     }
 
-    void loadCenter() {
-        if (!getConfig().contains("show.world")) return;
+    void loadConfigValues() {
         World w = Bukkit.getWorld(getConfig().getString("show.world"));
-        center = new Location(
-                w,
+        center = new Location(w,
                 getConfig().getDouble("show.x"),
                 getConfig().getDouble("show.y"),
-                getConfig().getDouble("show.z")
-        );
-        center.getChunk().setForceLoaded(true);
+                getConfig().getDouble("show.z"));
+
+        text = getConfig().getString("text.value");
+        duration = getConfig().getInt("firework.duration") * 20;
+        interval = getConfig().getInt("firework.interval");
+        radius = getConfig().getInt("firework.radius");
+        height = getConfig().getInt("firework.height");
+        amount = getConfig().getInt("firework.amount");
     }
 
-    void saveCenter(Location l) {
-        getConfig().set("show.world", l.getWorld().getName());
-        getConfig().set("show.x", l.getX());
-        getConfig().set("show.y", l.getY());
-        getConfig().set("show.z", l.getZ());
-        saveConfig();
-        center = l.clone();
-        center.getChunk().setForceLoaded(true);
-    }
+    /* ================= COMMAND ================= */
 
     @Override
-    public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
+    public boolean onCommand(CommandSender s, Command cmd, String l, String[] a) {
         if (!(s instanceof Player p)) return true;
-        if (a.length == 0) {
-            p.sendMessage("/tetshow set | start | stop | reload");
-            return true;
-        }
 
-        switch (a[0]) {
-            case "set" -> {
-                saveCenter(p.getLocation());
-                p.sendMessage("§aĐã set vị trí show");
+        switch (cmd.getName()) {
+            case "fwmenu" -> openMainMenu(p);
+            case "fwstart" -> startShow();
+            case "fwstop" -> stopShow();
+            case "fwset" -> {
+                center = p.getLocation();
+                saveLocation();
+                p.sendMessage("§aĐã set vị trí");
             }
-            case "start" -> {
-                if (running) return true;
-                if (center == null) {
-                    p.sendMessage("§cChưa set vị trí!");
-                    return true;
-                }
-                startShow();
-            }
-            case "stop" -> {
-                spawned.forEach(Entity::remove);
-                spawned.clear();
-                running = false;
-            }
-            case "reload" -> {
+            case "fwreload" -> {
                 reloadConfig();
-                loadCenter();
-                p.sendMessage("§aReload config xong");
+                loadConfigValues();
+                p.sendMessage("§aReload xong");
             }
         }
         return true;
     }
 
+    void saveLocation() {
+        getConfig().set("show.world", center.getWorld().getName());
+        getConfig().set("show.x", center.getX());
+        getConfig().set("show.y", center.getY());
+        getConfig().set("show.z", center.getZ());
+        saveConfig();
+    }
+
+    /* ================= MENU ================= */
+
+    void openMainMenu(Player p) {
+        Inventory inv = Bukkit.createInventory(null, 27, "§6TetShow PRO MAX");
+
+        inv.setItem(10, item(Material.FIREWORK_ROCKET, "§aPháo hoa"));
+        inv.setItem(12, item(Material.NAME_TAG, "§eChữ"));
+        inv.setItem(14, item(Material.CLOCK, "§bThời gian"));
+        inv.setItem(16, item(Material.REDSTONE, "§cStart / Stop"));
+
+        p.openInventory(inv);
+    }
+
+    ItemStack item(Material m, String name) {
+        ItemStack i = new ItemStack(m);
+        ItemMeta im = i.getItemMeta();
+        im.setDisplayName(name);
+        i.setItemMeta(im);
+        return i;
+    }
+
+    @EventHandler
+    public void click(InventoryClickEvent e) {
+        if (!e.getView().getTitle().equals("§6TetShow PRO MAX")) return;
+        e.setCancelled(true);
+
+        Player p = (Player) e.getWhoClicked();
+
+        switch (e.getSlot()) {
+            case 10 -> openFireworkMenu(p);
+            case 12 -> {
+                waitText = true;
+                p.closeInventory();
+                p.sendMessage("§eNhập chữ mới:");
+            }
+            case 16 -> {
+                if (running) stopShow();
+                else startShow();
+            }
+        }
+    }
+
+    @EventHandler
+    public void chat(AsyncPlayerChatEvent e) {
+        if (!waitText) return;
+        waitText = false;
+        text = e.getMessage();
+        getConfig().set("text.value", text);
+        saveConfig();
+        e.getPlayer().sendMessage("§aĐã set chữ: " + text);
+        e.setCancelled(true);
+    }
+
     /* ================= SHOW ================= */
 
     void startShow() {
+        if (running) return;
         running = true;
-        runDragonAndFirework();
-    }
 
-    /* ================= RỒNG + PHÁO HOA ================= */
-
-    void runDragonAndFirework() {
-        World w = center.getWorld();
-
-        int parts = getConfig().getInt("dragon.parts");
-        double radius = getConfig().getDouble("dragon.radius");
-        double speed = getConfig().getDouble("dragon.speed");
-
-        int fireworkInterval = getConfig().getInt("firework.interval");
-        int fireworkDuration = getConfig().getInt("firework.duration") * 20;
-
-        List<ArmorStand> dragon = new ArrayList<>();
-
-        // tạo rồng
-        for (int i = 0; i < parts; i++) {
-            ArmorStand as = w.spawn(center, ArmorStand.class);
-            as.setSmall(true);
-            as.setBasePlate(false);
-            as.setGravity(false);
-
-            if (i == 0) {
-                as.getEquipment().setHelmet(new ItemStack(Material.DRAGON_HEAD));
-            } else {
-                as.getEquipment().setHelmet(
-                        new ItemStack(i % 2 == 0 ? Material.RED_CONCRETE : Material.YELLOW_CONCRETE)
-                );
-            }
-
-            dragon.add(as);
-            spawned.add(as);
-        }
-
-        new BukkitRunnable() {
-            double t = 0;
+        task = new BukkitRunnable() {
             int tick = 0;
-
-            Color[] colors = new Color[]{
-                    Color.RED, Color.YELLOW, Color.GREEN,
-                    Color.WHITE, Color.AQUA, Color.PURPLE
-            };
 
             @Override
             public void run() {
-                int i = 0;
-                for (ArmorStand a : dragon) {
-                    double angle = t + i * 0.25;
-                    a.teleport(center.clone().add(
-                            Math.cos(angle) * radius,
-                            6 + i * 0.12,
-                            Math.sin(angle) * radius
-                    ));
-                    i++;
-                }
-                t += speed;
-
-                // vòng pháo hoa đổi màu
-                if (tick % fireworkInterval == 0) {
-                    Color c = colors[(tick / fireworkInterval) % colors.length];
-                    double base = tick * 0.05;
-
-                    for (int k = 0; k < 12; k++) {
-                        double ang = base + (Math.PI * 2 / 12) * k;
-                        Location l = center.clone().add(
-                                Math.cos(ang) * 25,
-                                22,
-                                Math.sin(ang) * 25
-                        );
-
-                        Firework f = w.spawn(l, Firework.class);
-                        FireworkMeta m = f.getFireworkMeta();
-                        m.addEffect(FireworkEffect.builder()
-                                .withColor(c)
-                                .trail(true)
-                                .flicker(true)
-                                .with(FireworkEffect.Type.BALL_LARGE)
-                                .build());
-                        m.setPower(2);
-                        f.setFireworkMeta(m);
-                        spawned.add(f);
-                    }
-                }
-
-                // bắn chữ
-                if (tick == 200) fireworkText("TA GIAO");
-                if (tick == 400) fireworkText("HAPPY NEW YEAR");
-
-                if (tick++ > fireworkDuration) {
-                    dragon.forEach(Entity::remove);
+                if (tick > duration) {
                     cancel();
                     running = false;
+                    return;
                 }
+
+                spawnCircleFirework();
+                if (tick == 100) spawnText();
+
+                tick++;
             }
-        }.runTaskTimer(this, 0, 2);
+        };
+        task.runTaskTimer(this, 0, interval);
     }
 
-    /* ================= CHỮ PHÁO HOA ================= */
+    void stopShow() {
+        if (task != null) task.cancel();
+        running = false;
+    }
 
-    void fireworkText(String text) {
-        World w = center.getWorld();
-        int baseX = -text.length() * 2;
+    /* ================= PHÁO HOA ================= */
 
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
+    void spawnCircleFirework() {
+        Color[] colors = {
+                Color.RED, Color.ORANGE, Color.YELLOW,
+                Color.GREEN, Color.AQUA, Color.BLUE, Color.PURPLE
+        };
+
+        FireworkEffect.Type[] types = FireworkEffect.Type.values();
+
+        for (int i = 0; i < amount; i++) {
+            double ang = Math.PI * 2 / amount * i;
+            Location l = center.clone().add(
+                    Math.cos(ang) * radius,
+                    height,
+                    Math.sin(ang) * radius
+            );
+
+            Firework f = center.getWorld().spawn(l, Firework.class);
+            FireworkMeta m = f.getFireworkMeta();
+            m.addEffect(FireworkEffect.builder()
+                    .with(types[new Random().nextInt(types.length)])
+                    .withColor(colors)
+                    .trail(true)
+                    .flicker(true)
+                    .build());
+            m.setPower(2);
+            f.setFireworkMeta(m);
+        }
+    }
+
+    void spawnText() {
+        int x = -text.length() * 3;
+        for (char c : text.toCharArray()) {
             if (c == ' ') {
-                baseX += 4;
+                x += 4;
                 continue;
             }
             for (int y = 0; y < 8; y++) {
-                Location l = center.clone().add(baseX, 15 + y, 0);
-                Firework f = w.spawn(l, Firework.class);
+                Location l = center.clone().add(x, height + y, 0);
+                Firework f = center.getWorld().spawn(l, Firework.class);
                 FireworkMeta m = f.getFireworkMeta();
                 m.addEffect(FireworkEffect.builder()
-                        .withColor(Color.YELLOW, Color.RED)
-                        .trail(true).flicker(true).build());
+                        .withColor(Color.YELLOW, Color.RED, Color.GREEN)
+                        .trail(true).flicker(true)
+                        .build());
                 m.setPower(0);
                 f.setFireworkMeta(m);
-                spawned.add(f);
             }
-            baseX += 4;
+            x += 4;
         }
     }
 }
