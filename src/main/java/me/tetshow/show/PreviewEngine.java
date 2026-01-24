@@ -15,8 +15,8 @@ public class PreviewEngine {
             FireworkEffect.builder()
                 .with(ShowData.pattern)
                 .withColor(ShowData.color)
-                .flicker(true)
                 .trail(true)
+                .flicker(true)
                 .build()
         );
 
