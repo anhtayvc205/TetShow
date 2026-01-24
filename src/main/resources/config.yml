@@ -4,11 +4,20 @@ show:
   y: 100
   z: 0
 
-dragon:
-  parts: 40
-  radius: 14
-  speed: 0.05
-
 firework:
-  interval: 10
-  duration: 600   # 10 phút
+  enabled: true
+  duration: 300
+  interval: 6
+  radius: 25
+  height: 20
+  amount: 16
+  types: ALL
+  colors: RAINBOW
+  pattern: CIRCLE
+
+text:
+  enabled: true
+  value: "TA GIAO"
+  size: 1
+  height: 18
+  color: RED
