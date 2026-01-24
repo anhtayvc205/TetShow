@@ -1,7 +1,15 @@
 name: TetShow
-version: 1.0
+version: 4.0-PROMAX
 main: TetShow
 api-version: 1.21
 commands:
-  tetshow:
-    usage: /tetshow <set|start|stop|reload>
+  fwmenu:
+    usage: /fwmenu
+  fwstart:
+    usage: /fwstart
+  fwstop:
+    usage: /fwstop
+  fwset:
+    usage: /fwset
+  fwreload:
+    usage: /fwreload
