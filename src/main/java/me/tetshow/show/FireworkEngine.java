@@ -1,22 +1,26 @@
-package me.tetshow.show;
+package me.tetshow.engine;
 
-import me.tetshow.TetShow;
+import me.tetshow.data.ShowData;
 import org.bukkit.*;
 import org.bukkit.entity.Firework;
 import org.bukkit.inventory.meta.FireworkMeta;
 
 public class FireworkEngine {
 
-    public static void spawn(Location l) {
-        Firework fw = l.getWorld().spawn(l, Firework.class);
+    public static void shoot(Location loc) {
+        Firework fw = loc.getWorld().spawn(loc, Firework.class);
         FireworkMeta meta = fw.getFireworkMeta();
-        meta.addEffect(FireworkEffect.builder()
-                .with(TetShow.get().getData().pattern)
-                .withColor(TetShow.get().getData().colors)
+
+        meta.addEffect(
+            FireworkEffect.builder()
+                .with(ShowData.pattern)
+                .withColor(ShowData.colors)
                 .trail(true)
                 .flicker(true)
-                .build());
-        meta.setPower(TetShow.get().getData().power);
+                .build()
+        );
+
+        meta.setPower(ShowData.power);
         fw.setFireworkMeta(meta);
     }
 }
