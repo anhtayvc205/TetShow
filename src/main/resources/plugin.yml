@@ -1,15 +1,8 @@
+
 name: TetShow
-version: 4.0-PROMAX
-main: TetShow
+version: 1.0-PRO
+main: me.tetshow.TetShow
 api-version: 1.21
 commands:
-  fwmenu:
-    usage: /fwmenu
-  fwstart:
-    usage: /fwstart
-  fwstop:
-    usage: /fwstop
-  fwset:
-    usage: /fwset
-  fwreload:
-    usage: /fwreload
+  fw:
+    description: Firework show menu
