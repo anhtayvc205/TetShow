@@ -1,5 +1,6 @@
 package me.tetshow.gui;
 
+import me.tetshow.engine.FireworkEngine;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.*;
@@ -8,19 +9,16 @@ import org.bukkit.inventory.meta.ItemMeta;
 public class PreviewMenu {
 
     public static void open(Player p) {
-        Inventory inv = Bukkit.createInventory(null, 27, "§6Preview");
+        Inventory inv = Bukkit.createInventory(null, 27, "§aPreview");
 
-        inv.setItem(11, item(Material.FIREWORK_ROCKET, "§aXem preview"));
-        inv.setItem(15, item(Material.LIME_WOOL, "§aChạy show"));
-
-        p.openInventory(inv);
-    }
-
-    private static ItemStack item(Material m, String name) {
-        ItemStack i = new ItemStack(m);
+        ItemStack i = new ItemStack(Material.FIREWORK_ROCKET);
         ItemMeta im = i.getItemMeta();
-        im.setDisplayName(name);
+        im.setDisplayName("§eBắn thử");
         i.setItemMeta(im);
-        return i;
+
+        inv.setItem(13, i);
+        p.openInventory(inv);
+
+        FireworkEngine.shoot(p.getLocation());
     }
 }
