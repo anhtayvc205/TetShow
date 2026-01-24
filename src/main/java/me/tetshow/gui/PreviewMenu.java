@@ -3,11 +3,12 @@ package me.tetshow.gui;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.*;
+import org.bukkit.inventory.meta.ItemMeta;
 
 public class PreviewMenu {
 
     public static void open(Player p) {
-        Inventory inv = Bukkit.createInventory(null, 27, "§6Preview pháo hoa");
+        Inventory inv = Bukkit.createInventory(null, 27, "§6Preview");
 
         inv.setItem(11, item(Material.FIREWORK_ROCKET, "§aXem preview"));
         inv.setItem(15, item(Material.LIME_WOOL, "§aChạy show"));
