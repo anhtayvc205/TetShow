@@ -1,27 +1,18 @@
 package me.tetshow;
 
-import me.tetshow.command.FWCommand;
-import me.tetshow.data.ShowData;
+import me.tetshow.gui.MainMenu;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.entity.Player;
 
 public class TetShow extends JavaPlugin {
 
-    private static TetShow instance;
-    private ShowData data;
-
     @Override
     public void onEnable() {
-        instance = this;
-        saveDefaultConfig();
-        data = new ShowData(this);
-        getCommand("fw").setExecutor(new FWCommand(this));
-    }
-
-    public static TetShow get() {
-        return instance;
-    }
-
-    public ShowData getData() {
-        return data;
+        getCommand("fw").setExecutor((sender, cmd, label, args) -> {
+            if (!(sender instanceof Player p)) return true;
+            MainMenu.open(p);
+            return true;
+        });
+        getLogger().info("TetShow enabled");
     }
 }
